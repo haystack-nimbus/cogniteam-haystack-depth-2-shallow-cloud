@@ -92,7 +92,7 @@ public:
         nodePrivate.param("min_deg_angle", minDegAngle_, -90.0);
         nodePrivate.param("max_deg_angle", maxDegAngle_, 90.0);
 
-        nodePrivate.param("base_frmae", base_frame_, string("base_link")); 
+        nodePrivate.param("base_frame", base_frame_, string("base_link")); 
    
 
 
@@ -102,7 +102,7 @@ public:
         info_sub = node_.subscribe( "/camera/aligned_depth_to_color/camera_info", 1,
              &Depth2Scan::cameraInfoCallback, this);
 
-        scan_pub_ = node_.advertise<sensor_msgs::LaserScan>("/scan_from_depth", 50);
+        scan_pub_ = node_.advertise<sensor_msgs::LaserScan>("/scan_from_shallow_cloud", 50);
 
         pubPclLaser_ = node_.advertise<pcl::PointCloud<pcl::PointXYZRGB> >
 		 ("/shallow_cloud", 1, true); 
@@ -296,17 +296,13 @@ private:
 
             // //  publish cloud
             publishPointCloud(deg_dist_map);
-
-
-            //  publish scan
-            // publishScan(deg_dist_map);            
            
 
         }
             
     }
 
-    void publishPointCloud(const std::map<int, pair_3d_point_with_distance >& deg_dist_map) const {
+    void publishPointCloud(const std::map<int, pair_3d_point_with_distance >& deg_dist_map)  {
 
         pcl::PointCloud<pcl::PointXYZRGB> cloud;
         cloud.header.frame_id = base_frame_;
@@ -341,60 +337,66 @@ private:
 
         }
 
-        pubPclLaser_.publish(cloud); 
+
+        publishScan(cloud); 
+
+        // pubPclLaser_.publish(cloud);
+        
+        
 
     }
 
-    // void publishScan(const std::map<int, pair_3d_point_with_distance >& deg_dist_map) const {
+    void publishScan(const pcl::PointCloud<pcl::PointXYZRGB>& cloud_msg)  {
 
 
-    //     unsigned int num_readings = 360;
-    //     double laser_frequency = 40;
-    //     double ranges[num_readings];
-    //     double intensities[num_readings];
+            // build laserscan output
+        sensor_msgs::LaserScan scan_msg;
+        scan_msg.header.frame_id = cloud_msg.header.frame_id;
+        // scan_msg.header.stamp = cloud_msg.header.stamp;
 
-    //     ros::Time scan_time = ros::Time::now();
+        scan_msg.angle_min = -3.14;
+        scan_msg.angle_max = 3.14;
+        scan_msg.angle_increment = 0.0087;
+        scan_msg.time_increment = 0.0;
+        // scan_msg.scan_time = ros::Time::now();
+        scan_msg.range_min = minDistMeters_;
+        scan_msg.range_max = maxDistMeters_;
 
+        // determine amount of rays to create
+        uint32_t ranges_size = std::ceil(
+            (scan_msg.angle_max - scan_msg.angle_min) / scan_msg.angle_increment);
 
-    //     float angle = angles::from_degrees(num_readings);
-    //     //populate the LaserScan message
-    //     sensor_msgs::LaserScan scan;
-    //     scan.header.stamp = scan_time;
-    //     scan.header.frame_id = "base_link";
-    //     scan.angle_min = angles::from_degrees(-(depth_angle / 2));
-    //     scan.angle_max = angles::from_degrees( depth_angle / 2);
-    //     scan.angle_increment = angle / num_readings;
-    //     scan.time_increment = (1 / laser_frequency) / (num_readings);
-    //     scan.range_min = 0.0;
-    //     scan.range_max = 100.0;
+        // determine if laserscan rays with no obstacle data will evaluate to infinity or max_range
+        scan_msg.ranges.assign(ranges_size, std::numeric_limits<double>::infinity());
+       
 
-    //     scan.ranges.resize(num_readings);
-    //     scan.intensities.resize(num_readings);
-
-     
-        
-
-    //     for (auto it = deg_dist_map.begin(); it != deg_dist_map.end(); ++it)
-    //     {   
-    //         int deg =  it->first;
+        for( int i = 0; i < cloud_msg.size(); i++)
+        {   
+            pcl::PointXYZRGB pRGB = cloud_msg[i];  
+            
+            if (std::isnan(pRGB.x) || std::isnan(pRGB.y) || std::isnan(pRGB.z)) {
+            
+                continue;
+            }
             
 
-    //         if( deg < 0){
+            double range = hypot(pRGB.x, pRGB.y);
+            
 
-    //             int cellNum = deg + (depth_angle /2);
-    //             scan.ranges[cellNum] =  it->second.second;               
-    //         } 
-    //         else if( deg >= 0 && deg < (depth_angle /2)) {
-    //             scan.ranges[deg + (depth_angle /2)] =  it->second.second;
-    //         }           
+            double angle = atan2(pRGB.y, pRGB.x);
+            
 
-    //     }  
+            // overwrite range at laserscan ray if new range is smaller
+            int index = (angle - scan_msg.angle_min) / scan_msg.angle_increment;
+            if (range < scan_msg.ranges[index]) {
+                scan_msg.ranges[index] = range;
+            }
+        }
 
-        
-    //     scan_pub_.publish(scan);
+        scan_pub_.publish(scan_msg);
 
 
-    // }
+    }
     
    
 
