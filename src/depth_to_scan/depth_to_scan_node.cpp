@@ -352,13 +352,13 @@ private:
             // build laserscan output
         sensor_msgs::LaserScan scan_msg;
         scan_msg.header.frame_id = cloud_msg.header.frame_id;
-        // scan_msg.header.stamp = cloud_msg.header.stamp;
+        scan_msg.header.stamp = ros::Time::now();
 
         scan_msg.angle_min = -3.14;
         scan_msg.angle_max = 3.14;
         scan_msg.angle_increment = 0.0087;
         scan_msg.time_increment = 0.0;
-        // scan_msg.scan_time = ros::Time::now();
+        scan_msg.scan_time = 0.0133333;
         scan_msg.range_min = minDistMeters_;
         scan_msg.range_max = maxDistMeters_;
 
