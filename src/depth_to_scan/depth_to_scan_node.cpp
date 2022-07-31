@@ -102,10 +102,10 @@ public:
         info_sub = node_.subscribe( "/camera/aligned_depth_to_color/camera_info", 1,
              &Depth2Scan::cameraInfoCallback, this);
 
-        scan_pub_ = node_.advertise<sensor_msgs::LaserScan>("/scan_from_shallow_cloud", 50);
+        scan_pub_ = node_.advertise<sensor_msgs::LaserScan>("/scan_from_shallow_cloud", 1);
 
-        pubPclLaser_ = node_.advertise<pcl::PointCloud<pcl::PointXYZRGB> >
-		 ("/shallow_cloud", 1, true); 
+        // pubPclLaser_ = node_.advertise<pcl::PointCloud<pcl::PointXYZRGB> >
+		//  ("/shallow_cloud", 1, true); 
     }
 
     ~Depth2Scan(){}
@@ -190,6 +190,14 @@ private:
     void depthCallback(const sensor_msgs::ImageConstPtr &image) {
 
         if (cameraInfoInited_) {    
+
+
+            if( !initFisrtMsg) {
+
+                initFisrtMsg = true;
+                start_scan_time_ = ros::Time::now();
+
+            }
 
             cerr<<"1111111111111111111 "<<endl;       
           
@@ -320,7 +328,7 @@ private:
 
             pRGB.x =   it->second.first.x;
             pRGB.y =   it->second.first.y;        
-            pRGB.z =    0;   
+            pRGB.z =    0.0;   
 
            
 
@@ -337,7 +345,8 @@ private:
 
         }
 
-
+      
+       
         publishScan(cloud); 
 
         // pubPclLaser_.publish(cloud);
@@ -349,16 +358,20 @@ private:
     void publishScan(const pcl::PointCloud<pcl::PointXYZRGB>& cloud_msg)  {
 
 
+        auto end_scan_time = ros::Time::now();
+        auto scan_duration = (end_scan_time - start_scan_time_).toSec();
+        start_scan_time_ = end_scan_time;
+
             // build laserscan output
         sensor_msgs::LaserScan scan_msg;
-        scan_msg.header.frame_id = cloud_msg.header.frame_id;
+        scan_msg.header.frame_id = base_frame_;
         scan_msg.header.stamp = ros::Time::now();
-
-        scan_msg.angle_min = -3.14;
-        scan_msg.angle_max = 3.14;
-        scan_msg.angle_increment = 0.0087;
-        scan_msg.time_increment = 0.0;
-        scan_msg.scan_time = 0.0133333;
+        
+        scan_msg.angle_min = -M_PI;
+        scan_msg.angle_max = M_PI;
+        scan_msg.angle_increment = M_PI / 180.0;
+        scan_msg.time_increment = 0.0; //scan_duration;
+        scan_msg.scan_time = scan_duration;
         scan_msg.range_min = minDistMeters_;
         scan_msg.range_max = maxDistMeters_;
 
@@ -458,7 +471,10 @@ private:
     float fy_ = 0;
 
     bool initTransform_ = false;
+    bool initFisrtMsg = false;
     tf::StampedTransform transform_;
+
+    ros::Time start_scan_time_;
 
 
 
