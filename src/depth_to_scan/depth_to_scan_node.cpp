@@ -373,7 +373,7 @@ private:
         scan_msg.time_increment = 0.0; //scan_duration;
         scan_msg.scan_time = scan_duration;
         scan_msg.range_min = minDistMeters_;
-        scan_msg.range_max = maxDistMeters_;
+        scan_msg.range_max = 50; // needs to be above local cost map size //maxDistMeters_;
 
         // determine amount of rays to create
         uint32_t ranges_size = std::ceil(
