@@ -92,14 +92,13 @@ public:
         nodePrivate.param("min_deg_angle", minDegAngle_, -90.0);
         nodePrivate.param("max_deg_angle", maxDegAngle_, 90.0);
 
-        nodePrivate.param("base_frame", base_frame_, string("base_link")); 
-   
+        nodePrivate.param("base_frame", base_frame_, string("base_link"));    
 
 
-        depth_image_sub = node_.subscribe("/camera/aligned_depth_to_color/image_raw", 1,
+        depth_image_sub = node_.subscribe("/camera/depth/image_rect_raw", 1,
              &Depth2Scan::depthCallback, this);
 
-        info_sub = node_.subscribe( "/camera/aligned_depth_to_color/camera_info", 1,
+        info_sub = node_.subscribe( "/camera/depth/camera_info", 1,
              &Depth2Scan::cameraInfoCallback, this);
 
         scan_pub_ = node_.advertise<sensor_msgs::LaserScan>("/scan_from_shallow_cloud", 1);
@@ -112,7 +111,6 @@ public:
 
 private:
 
-    
 
     geometry_msgs::PointStamped transformToByFrames(
         Point3d objectPoint3d, string base_Frame, string child_Frame)  {
@@ -199,7 +197,6 @@ private:
 
             }
 
-            cerr<<"1111111111111111111 "<<endl;       
           
             std::map<int, pair_3d_point_with_distance > deg_dist_map;
 
@@ -300,10 +297,11 @@ private:
                 }
             }           
 
-            cerr<<"deg_dist_map "<<deg_dist_map.size()<<endl;
 
             // //  publish cloud
-            publishPointCloud(deg_dist_map);
+            //publishPointCloud(deg_dist_map);
+
+            publishScan(deg_dist_map); 
            
 
         }
@@ -343,11 +341,8 @@ private:
 
             cloud.points.push_back(pRGB); 
 
-        }
-
-      
+        }     
        
-        publishScan(cloud); 
 
         // pubPclLaser_.publish(cloud);
         
@@ -355,7 +350,7 @@ private:
 
     }
 
-    void publishScan(const pcl::PointCloud<pcl::PointXYZRGB>& cloud_msg)  {
+    void publishScan(const std::map<int, pair_3d_point_with_distance >& deg_dist_map)  {
 
 
         auto end_scan_time = ros::Time::now();
@@ -383,15 +378,18 @@ private:
         scan_msg.ranges.assign(ranges_size, std::numeric_limits<double>::infinity());
        
 
-        for( int i = 0; i < cloud_msg.size(); i++)
+        for (auto it = deg_dist_map.begin(); it != deg_dist_map.end(); ++it)
         {   
-            pcl::PointXYZRGB pRGB = cloud_msg[i];  
+
+            float closestDistM = it->second.second;
+            float radAngle = angles::from_degrees(it->first);
+            cv::Point3d pRGB =  it->second.first;
+
             
             if (std::isnan(pRGB.x) || std::isnan(pRGB.y) || std::isnan(pRGB.z)) {
             
                 continue;
-            }
-            
+            }            
 
             double range = hypot(pRGB.x, pRGB.y);
             
@@ -407,7 +405,6 @@ private:
         }
 
         scan_pub_.publish(scan_msg);
-
 
     }
     
