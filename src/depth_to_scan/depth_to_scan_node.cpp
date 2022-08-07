@@ -311,9 +311,9 @@ private:
 
             auto stop = high_resolution_clock::now();
 
-            auto duration = duration_cast<seconds>(stop - start);
+            float duration = float(duration_cast<milliseconds>(stop - start).count()) / 1000.0;
  
-            cerr<< "Time taken by function: "<<duration.count()<<endl;
+            cerr<< "Time taken by function: "<<duration<<endl;
            
 
         }
