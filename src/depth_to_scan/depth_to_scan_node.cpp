@@ -67,10 +67,13 @@
 #include <pcl_ros/point_cloud.h>
 #include <pcl/conversions.h>
 
+#include <chrono>
+
 
 using namespace std;
 using namespace cv;
 using namespace pcl;
+using namespace std::chrono;
 
 
 typedef pair<cv::Point3d, float> pair_3d_point_with_distance;
@@ -186,6 +189,9 @@ private:
     }
 
     void depthCallback(const sensor_msgs::ImageConstPtr &image) {
+        
+
+        auto start = high_resolution_clock::now();
 
         if (cameraInfoInited_) {    
 
@@ -302,6 +308,12 @@ private:
             //publishPointCloud(deg_dist_map);
 
             publishScan(deg_dist_map); 
+
+            auto stop = high_resolution_clock::now();
+
+            auto duration = duration_cast<seconds>(stop - start);
+ 
+            cerr<< "Time taken by function: "<<duration.count()<<endl;
            
 
         }
