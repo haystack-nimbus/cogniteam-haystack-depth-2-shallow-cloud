@@ -307,7 +307,7 @@ private:
             // //  publish cloud
             //publishPointCloud(deg_dist_map);
 
-            publishScan(deg_dist_map); 
+            publishScan(deg_dist_map, image->header.stamp); 
 
             auto stop = high_resolution_clock::now();
 
@@ -338,7 +338,7 @@ private:
 
             pRGB.x =   it->second.first.x;
             pRGB.y =   it->second.first.y;        
-            pRGB.z =    0.0;   
+            pRGB.z =    0.2;
 
            
 
@@ -362,18 +362,17 @@ private:
 
     }
 
-    void publishScan(const std::map<int, pair_3d_point_with_distance >& deg_dist_map)  {
+    void publishScan(const std::map<int, pair_3d_point_with_distance >& deg_dist_map, ros::Time t)  {
 
 
         auto end_scan_time = ros::Time::now();
         auto scan_duration = (end_scan_time - start_scan_time_).toSec();
         start_scan_time_ = end_scan_time;
 
-            // build laserscan output
+        // build laserscan output
         sensor_msgs::LaserScan scan_msg;
         scan_msg.header.frame_id = base_frame_;
-        scan_msg.header.stamp = ros::Time::now();
-        
+        scan_msg.header.stamp = t;        
         scan_msg.angle_min = -M_PI;
         scan_msg.angle_max = M_PI;
         scan_msg.angle_increment = M_PI / 180.0;
@@ -458,7 +457,7 @@ private:
     image_geometry::PinholeCameraModel pinholeCameraModel_;
 
 
-    string base_frame_= "base_link";
+    string base_frame_= "base_footprint";
 
     string source_frame = "camera_depth_optical_frame";
 
